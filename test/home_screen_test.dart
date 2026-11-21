@@ -66,7 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('home-compact-layout')), findsOneWidget);
-    expect(find.text('360 kkal'), findsOneWidget);
+    expect(find.text('360 kkal'), findsNWidgets(2));
     expect(find.text('Nasi Uduk'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
