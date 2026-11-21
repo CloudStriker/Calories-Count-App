@@ -68,6 +68,13 @@ void main() {
     expect(find.byKey(const ValueKey<String>('home-compact-layout')), findsOneWidget);
     expect(find.text('360 kkal'), findsNWidgets(2));
     expect(find.text('Nasi Uduk'), findsOneWidget);
+    final macroBarFill = find.descendant(
+      of: find.byType(AnimatedFractionallySizedBox).first,
+      matching: find.byType(ColoredBox),
+    );
+    final barSize = tester.getSize(macroBarFill);
+    expect(barSize.height, 4.0);
+    expect(barSize.width, greaterThan(0));
     expect(tester.takeException(), isNull);
   });
 

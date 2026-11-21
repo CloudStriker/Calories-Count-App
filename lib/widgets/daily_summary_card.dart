@@ -319,16 +319,15 @@ class _MacroChip extends StatelessWidget {
                 fit: StackFit.expand,
                 children: <Widget>[
                   ColoredBox(color: colors.border),
-                  Align(
+                  AnimatedFractionallySizedBox(
                     alignment: Alignment.centerLeft,
-                    child: AnimatedFractionallySizedBox(
-                      duration: disableAnimations
-                          ? Duration.zero
-                          : CalSnapMotion.transitionDuration,
-                      curve: CalSnapMotion.easeOut,
-                      widthFactor: share.clamp(0.0, 1.0),
-                      child: ColoredBox(color: accentColor),
-                    ),
+                    duration: disableAnimations
+                        ? Duration.zero
+                        : CalSnapMotion.transitionDuration,
+                    curve: CalSnapMotion.easeOut,
+                    widthFactor: share.clamp(0.0, 1.0),
+                    heightFactor: 1.0,
+                    child: ColoredBox(color: accentColor),
                   ),
                 ],
               ),
