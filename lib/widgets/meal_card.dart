@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/theme/app_theme.dart';
 import 'package:calsnap/utils/date_format.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class MealCard extends StatelessWidget {
   const MealCard({

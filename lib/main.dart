@@ -6,7 +6,7 @@ import 'package:calsnap/services/photo_storage.dart';
 import 'package:calsnap/services/settings_store.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

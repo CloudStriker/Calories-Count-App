@@ -1,6 +1,6 @@
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/theme/app_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class DailySummaryCard extends StatelessWidget {
   const DailySummaryCard({

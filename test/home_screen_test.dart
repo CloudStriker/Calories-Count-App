@@ -5,7 +5,7 @@ import 'package:calsnap/screens/home_screen.dart';
 import 'package:calsnap/services/settings_store.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes.dart';

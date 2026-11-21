@@ -10,12 +10,10 @@ import 'package:http/http.dart' as http;
 
 class GeminiFoodAnalyzer implements FoodAnalyzer {
   GeminiFoodAnalyzer({
-    required SettingsStore settingsStore,
-    http.Client? httpClient,
-    Duration timeout = const Duration(seconds: 45),
-  })  : _settingsStore = settingsStore,
-        _httpClient = httpClient,
-        _timeout = timeout;
+    required this._settingsStore,
+    this._httpClient,
+    this._timeout = const Duration(seconds: 45),
+  });
 
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models';

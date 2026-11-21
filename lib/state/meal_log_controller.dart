@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/services/food_analyzer.dart';
 import 'package:calsnap/services/health_sync_service.dart';
@@ -11,18 +9,13 @@ import 'package:flutter/foundation.dart';
 
 class MealLogController extends ChangeNotifier {
   MealLogController({
-    required SettingsStore settingsStore,
-    required MealStore mealStore,
-    required PhotoStore photoStore,
-    required FoodAnalyzer foodAnalyzer,
-    required HealthSyncGateway healthSync,
+    required this._settingsStore,
+    required this._mealStore,
+    required this._photoStore,
+    required this._foodAnalyzer,
+    required this._healthSync,
     DateTime? initialDate,
-  })  : _settingsStore = settingsStore,
-        _mealStore = mealStore,
-        _photoStore = photoStore,
-        _foodAnalyzer = foodAnalyzer,
-        _healthSync = healthSync,
-        _selectedDate = startOfDay(initialDate ?? DateTime.now());
+  }) : _selectedDate = startOfDay(initialDate ?? DateTime.now());
 
   final SettingsStore _settingsStore;
   final MealStore _mealStore;
@@ -145,7 +138,7 @@ class MealLogController extends ChangeNotifier {
       savedPhotoPath = await _photoStore.saveMealPhoto(photoBytes, mealId);
     }
 
-    var entry = MealEntry.fromItems(
+    final entry = MealEntry.fromItems(
       id: mealId,
       eatenAt: eatenAt,
       category: category,
