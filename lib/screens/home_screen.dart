@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/screens/review_meal_screen.dart';
 import 'package:calsnap/screens/settings_screen.dart';
