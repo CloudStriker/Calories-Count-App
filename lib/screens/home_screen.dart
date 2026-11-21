@@ -9,8 +9,10 @@ import 'package:calsnap/theme/app_theme.dart';
 import 'package:calsnap/utils/date_format.dart';
 import 'package:calsnap/widgets/daily_summary_card.dart';
 import 'package:calsnap/widgets/meal_card.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:calsnap/widgets/tactile_press.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_ui/material_ui.dart';
 
 class PickedPhotoData {
   const PickedPhotoData({
@@ -198,7 +200,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               appBar: AppBar(
                 title: const Text(
                   'CalSnap',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    fontFamily: 'serif',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 24,
+                    letterSpacing: -0.4,
+                  ),
                 ),
                 actions: <Widget>[
                   IconButton(
@@ -435,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final colors = context.calColors;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.94),
         border: Border(top: BorderSide(color: colors.border)),
       ),
       child: SafeArea(
@@ -466,6 +473,8 @@ class _DateSwitcherRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final today = startOfDay(DateTime.now());
     final canGoForward = !isSameDay(selectedDate, today);
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    final dateLabel = formatRelativeDay(selectedDate);
 
     return Card(
       child: Padding(
@@ -473,26 +482,51 @@ class _DateSwitcherRow extends StatelessWidget {
         child: Row(
           children: <Widget>[
             IconButton(
-              onPressed: () => onSelectDate(
-                selectedDate.subtract(const Duration(days: 1)),
-              ),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onSelectDate(
+                  selectedDate.subtract(const Duration(days: 1)),
+                );
+              },
               tooltip: 'Hari sebelumnya',
               icon: const Icon(Icons.chevron_left_rounded),
             ),
             Expanded(
-              child: Text(
-                formatRelativeDay(selectedDate),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+              child: AnimatedSwitcher(
+                duration: disableAnimations
+                    ? Duration.zero
+                    : CalSnapMotion.transitionDuration,
+                switchInCurve: CalSnapMotion.easeOut,
+                switchOutCurve: CalSnapMotion.easeOut,
+                transitionBuilder: (child, animation) {
+                  if (disableAnimations) {
+                    return child;
+                  }
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.96, end: 1.0)
+                          .animate(animation),
+                      child: child,
                     ),
+                  );
+                },
+                child: Text(
+                  dateLabel,
+                  key: ValueKey<String>(dateLabel),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ),
             IconButton(
               onPressed: canGoForward
-                  ? () => onSelectDate(
+                  ? () {
+                      HapticFeedback.selectionClick();
+                      onSelectDate(
                         selectedDate.add(const Duration(days: 1)),
-                      )
+                      );
+                    }
                   : null,
               tooltip: 'Hari berikutnya',
               icon: const Icon(Icons.chevron_right_rounded),
@@ -521,19 +555,27 @@ class _CaptureActionButtons extends StatelessWidget {
       children: <Widget>[
         Expanded(
           flex: 3,
-          child: FilledButton.icon(
-            onPressed: isBusy ? null : onCamera,
-            icon: const Icon(Icons.photo_camera_rounded),
-            label: const Text('Kamera'),
+          child: TactilePress(
+            disabled: isBusy,
+            enableHaptic: true,
+            child: FilledButton.icon(
+              onPressed: isBusy ? null : onCamera,
+              icon: const Icon(Icons.photo_camera_rounded),
+              label: const Text('Kamera'),
+            ),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           flex: 2,
-          child: OutlinedButton.icon(
-            onPressed: isBusy ? null : onGallery,
-            icon: const Icon(Icons.photo_library_rounded),
-            label: const Text('Galeri'),
+          child: TactilePress(
+            disabled: isBusy,
+            enableHaptic: true,
+            child: OutlinedButton.icon(
+              onPressed: isBusy ? null : onGallery,
+              icon: const Icon(Icons.photo_library_rounded),
+              label: const Text('Galeri'),
+            ),
           ),
         ),
       ],

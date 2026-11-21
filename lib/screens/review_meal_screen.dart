@@ -5,6 +5,7 @@ import 'package:calsnap/screens/settings_screen.dart';
 import 'package:calsnap/services/food_analyzer.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
+import 'package:calsnap/widgets/tactile_press.dart';
 import 'package:material_ui/material_ui.dart';
 
 class ReviewMealScreen extends StatefulWidget {
@@ -305,17 +306,21 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
             ],
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isAnalyzing ? null : _analyze,
-                icon: _isAnalyzing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome_rounded),
-                label: Text(
-                  _isAnalyzing ? 'Menganalisis Foto...' : 'Analisis Kalori',
+              child: TactilePress(
+                disabled: _isAnalyzing,
+                enableHaptic: true,
+                child: FilledButton.icon(
+                  onPressed: _isAnalyzing ? null : _analyze,
+                  icon: _isAnalyzing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome_rounded),
+                  label: Text(
+                    _isAnalyzing ? 'Menganalisis Foto...' : 'Analisis Kalori',
+                  ),
                 ),
               ),
             ),
@@ -455,6 +460,7 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: theme.colorScheme.primary,
+                fontFeatures: tabularFigures,
               ),
             ),
             const SizedBox(height: 6),
@@ -463,6 +469,7 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.mutedText,
                 fontWeight: FontWeight.w600,
+                fontFeatures: tabularFigures,
               ),
             ),
           ],
@@ -517,9 +524,10 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
 
   Widget _buildBottomSaveBar() {
     final colors = context.calColors;
+    final disabled = _items.isEmpty || _isSaving;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.94),
         border: Border(top: BorderSide(color: colors.border)),
       ),
       child: SafeArea(
@@ -528,16 +536,20 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: SizedBox(
             width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: (_items.isEmpty || _isSaving) ? null : _save,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_rounded),
-              label: Text(_isSaving ? 'Menyimpan...' : 'Simpan & Sinkron'),
+            child: TactilePress(
+              disabled: disabled,
+              enableHaptic: true,
+              child: FilledButton.icon(
+                onPressed: disabled ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: Text(_isSaving ? 'Menyimpan...' : 'Simpan & Sinkron'),
+              ),
             ),
           ),
         ),

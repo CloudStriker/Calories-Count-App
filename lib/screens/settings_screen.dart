@@ -2,6 +2,7 @@ import 'package:calsnap/services/health_sync_service.dart';
 import 'package:calsnap/services/settings_store.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
+import 'package:calsnap/widgets/tactile_press.dart';
 import 'package:material_ui/material_ui.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -276,18 +277,22 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _isSaving ? null : _saveSettings,
-                          icon: _isSaving
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.save_rounded),
-                          label: const Text('Simpan Pengaturan'),
+                        child: TactilePress(
+                          disabled: _isSaving,
+                          enableHaptic: true,
+                          child: FilledButton.icon(
+                            onPressed: _isSaving ? null : _saveSettings,
+                            icon: _isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_rounded),
+                            label: const Text('Simpan Pengaturan'),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),

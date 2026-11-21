@@ -141,4 +141,28 @@ void main() {
     expect(controller.meals, hasLength(2));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('renders cleanly with reduced motion enabled', (tester) async {
+    final controller = await buildSeededController();
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: HomeScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('18%'), findsOneWidget);
+    expect(find.text('Nasi Uduk'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

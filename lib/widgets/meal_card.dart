@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/theme/app_theme.dart';
 import 'package:calsnap/utils/date_format.dart';
+import 'package:calsnap/widgets/tactile_press.dart';
 import 'package:material_ui/material_ui.dart';
 
 class MealCard extends StatelessWidget {
@@ -39,37 +40,58 @@ class MealCard extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         meal.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: theme.textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Wrap(
                         spacing: 8,
-                        runSpacing: 4,
+                        runSpacing: 6,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: <Widget>[
-                          Text(
-                            '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.mutedText,
-                              fontWeight: FontWeight.w500,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.mutedSurface,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colors.mutedText,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: tabularFigures,
+                              ),
                             ),
                           ),
-                          Text(
-                            '${meal.totalCalories.round()} kkal',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w700,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${meal.totalCalories.round()} kkal',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w800,
+                                fontFeatures: tabularFigures,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         'P ${meal.totalProtein.round()}g · K ${meal.totalCarbs.round()}g · L ${meal.totalFat.round()}g',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colors.mutedText,
+                          fontFeatures: tabularFigures,
                         ),
                       ),
                     ],
@@ -88,7 +110,9 @@ class MealCard extends StatelessWidget {
             if (meal.items.isNotEmpty) ...<Widget>[
               const SizedBox(height: 10),
               Text(
-                meal.items.map((item) => '${item.name} (${item.calories.round()} kkal)').join(', '),
+                meal.items
+                    .map((item) => '${item.name} (${item.calories.round()} kkal)')
+                    .join(', '),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -105,13 +129,15 @@ class MealCard extends StatelessWidget {
                 _SyncStatusBadge(status: meal.syncStatus),
                 if (meal.syncStatus == HealthSyncStatus.failed ||
                     meal.syncStatus == HealthSyncStatus.pending)
-                  TextButton.icon(
-                    onPressed: onRetrySync,
-                    icon: const Icon(Icons.sync_rounded, size: 18),
-                    label: Text(
-                      meal.syncStatus == HealthSyncStatus.failed
-                          ? 'Coba Lagi'
-                          : 'Sinkronkan',
+                  TactilePress(
+                    child: TextButton.icon(
+                      onPressed: onRetrySync,
+                      icon: const Icon(Icons.sync_rounded, size: 18),
+                      label: Text(
+                        meal.syncStatus == HealthSyncStatus.failed
+                            ? 'Coba Lagi'
+                            : 'Sinkronkan',
+                      ),
                     ),
                   ),
               ],
@@ -145,21 +171,23 @@ class _MealThumbnail extends StatelessWidget {
     final path = photoPath;
     final hasFile = path != null && path.isNotEmpty && File(path).existsSync();
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 64,
-        height: 64,
+    return Container(
+      width: 76,
+      height: 76,
+      decoration: BoxDecoration(
         color: colors.mutedSurface,
-        child: hasFile
-            ? Image.file(
-                File(path),
-                fit: BoxFit.cover,
-                semanticLabel: 'Foto makanan',
-                errorBuilder: (_, _, _) => _fallbackIcon(context),
-              )
-            : _fallbackIcon(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.border),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: hasFile
+          ? Image.file(
+              File(path),
+              fit: BoxFit.cover,
+              semanticLabel: 'Foto makanan',
+              errorBuilder: (_, _, _) => _fallbackIcon(context),
+            )
+          : _fallbackIcon(context),
     );
   }
 
