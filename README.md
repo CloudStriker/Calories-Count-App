@@ -45,7 +45,7 @@ Note: Android or One UI updates occasionally reset Health Connect permissions. I
 Requirements:
 
 - Flutter `3.50.0` or later (Dart `>=3.12.0`)
-- Java 17
+- Java 21
 - Android SDK platform 37 (`platforms;android-37.0`)
 
 If you build locally without CI, generate the Gradle wrapper once inside `android/` before running Flutter:
