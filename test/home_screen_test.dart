@@ -301,6 +301,9 @@ void main() {
 
     expect(find.bySemanticsLabel('Foto Nasi Gudeg'), findsOneWidget);
 
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Nasi Gudeg'));
     await tester.pumpAndSettle();
     expect(find.text('Komponen Makanan'), findsOneWidget);
@@ -418,15 +421,23 @@ void main() {
 
     await tester.tap(find.byTooltip('Pengaturan'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Tercatat di Health Connect hari ini: 2 catatan (850 kkal)'),
-      findsOneWidget,
+    final diagnosticFinder = find.text(
+      'Tercatat di Health Connect hari ini: 2 catatan (850 kkal)',
     );
+    await tester.scrollUntilVisible(
+      diagnosticFinder,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(diagnosticFinder, findsOneWidget);
+
     await tester.scrollUntilVisible(
       find.text('Buka Health Connect'),
       200,
       scrollable: find.byType(Scrollable).last,
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Buka Health Connect'));
     await tester.pumpAndSettle();
     expect(healthSync.openedSettingsCount, 1);

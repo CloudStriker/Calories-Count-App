@@ -80,22 +80,28 @@ class MealCard extends StatelessWidget {
                           Positioned(
                             top: 12,
                             left: 12,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xBD0A0A0A),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: tabularFigures,
+                            right: 12,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xBD0A0A0A),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: tabularFigures,
+                                  ),
                                 ),
                               ),
                             ),
@@ -135,26 +141,33 @@ class MealCard extends StatelessWidget {
                     children: <Widget>[
                       Row(
                         children: <Widget>[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.mutedSurface,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
-                              style: TextStyle(
-                                color: colors.mutedText,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: tabularFigures,
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.mutedSurface,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: colors.mutedText,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: tabularFigures,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           _CompactSyncIndicator(status: meal.syncStatus),
                         ],
                       ),
