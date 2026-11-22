@@ -41,3 +41,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 flutter {
     source = "../.."
 }
+
+dependencies {
+    implementation("androidx.health.connect:connect-client:1.2.0-alpha06")
+}

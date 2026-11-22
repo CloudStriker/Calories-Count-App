@@ -25,22 +25,35 @@ class MealLogController extends ChangeNotifier {
 
   DateTime _selectedDate;
   List<MealEntry> _meals = const <MealEntry>[];
+  Map<DateTime, double> _weeklyCalories = const <DateTime, double>{};
   AppSettings _settings = const AppSettings();
   HealthAvailability _healthAvailability = HealthAvailability.unavailable;
   bool _hasHealthPermission = false;
+  HealthConnectDaySummary? _todayHealthSummary;
   bool _isLoading = false;
   String? _errorMessage;
   int _idCounter = 0;
 
   DateTime get selectedDate => _selectedDate;
   List<MealEntry> get meals => _meals;
+  Map<DateTime, double> get weeklyCalories => _weeklyCalories;
   AppSettings get settings => _settings;
   HealthAvailability get healthAvailability => _healthAvailability;
   bool get hasHealthPermission => _hasHealthPermission;
+  HealthConnectDaySummary? get todayHealthSummary => _todayHealthSummary;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
   DailyTotals get dailyTotals => DailyTotals.fromMeals(_meals);
+
+  Future<Map<DateTime, double>> _fetchWeeklyCalories() async {
+    final days = buildWeekWindow(_selectedDate);
+    final totals = await _mealStore.getDailyCaloriesInRange(
+      days.first,
+      days.last,
+    );
+    return Map<DateTime, double>.unmodifiable(totals);
+  }
 
   Future<void> initialize() async {
     _isLoading = true;
@@ -50,10 +63,12 @@ class MealLogController extends ChangeNotifier {
       final results = await Future.wait<Object?>(<Future<Object?>>[
         _settingsStore.load(),
         _mealStore.getMealsForDate(_selectedDate),
+        _fetchWeeklyCalories(),
         _loadHealthStatus(),
       ]);
       _settings = results[0]! as AppSettings;
       _meals = List<MealEntry>.unmodifiable(results[1]! as List<MealEntry>);
+      _weeklyCalories = results[2]! as Map<DateTime, double>;
     } catch (_) {
       _errorMessage = 'Gagal memuat data harian.';
     } finally {
@@ -68,8 +83,12 @@ class MealLogController extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      final loaded = await _mealStore.getMealsForDate(_selectedDate);
-      _meals = List<MealEntry>.unmodifiable(loaded);
+      final results = await Future.wait<Object?>(<Future<Object?>>[
+        _mealStore.getMealsForDate(_selectedDate),
+        _fetchWeeklyCalories(),
+      ]);
+      _meals = List<MealEntry>.unmodifiable(results[0]! as List<MealEntry>);
+      _weeklyCalories = results[1]! as Map<DateTime, double>;
     } catch (_) {
       _errorMessage = 'Gagal memuat riwayat tanggal ini.';
     } finally {
@@ -90,6 +109,10 @@ class MealLogController extends ChangeNotifier {
         : false;
     _healthAvailability = availability;
     _hasHealthPermission = permitted;
+    _todayHealthSummary = (availability == HealthAvailability.available &&
+            permitted)
+        ? await _healthSync.readTodaySyncedSummary(DateTime.now())
+        : null;
   }
 
   Future<bool> connectHealthConnect() async {
@@ -102,14 +125,21 @@ class MealLogController extends ChangeNotifier {
     }
     if (availability == HealthAvailability.unavailable) {
       _hasHealthPermission = false;
+      _todayHealthSummary = null;
       notifyListeners();
       return false;
     }
     final granted = await _healthSync.requestWritePermission();
     _hasHealthPermission = granted;
+    _todayHealthSummary = granted
+        ? await _healthSync.readTodaySyncedSummary(DateTime.now())
+        : null;
     notifyListeners();
     return granted;
   }
+
+  Future<bool> openHealthConnectSettings() =>
+      _healthSync.openHealthConnectSettings();
 
   Future<FoodAnalysisResult> analyzePhoto({
     required Uint8List imageBytes,
@@ -175,6 +205,7 @@ class MealLogController extends ChangeNotifier {
       final reloaded = await _mealStore.getMealsForDate(_selectedDate);
       _meals = List<MealEntry>.unmodifiable(reloaded);
     }
+    _weeklyCalories = await _fetchWeeklyCalories();
     notifyListeners();
     return updated;
   }
@@ -185,8 +216,9 @@ class MealLogController extends ChangeNotifier {
     if (isSameDay(meal.eatenAt, _selectedDate)) {
       final reloaded = await _mealStore.getMealsForDate(_selectedDate);
       _meals = List<MealEntry>.unmodifiable(reloaded);
-      notifyListeners();
     }
+    _weeklyCalories = await _fetchWeeklyCalories();
+    notifyListeners();
   }
 
   Future<void> saveSettings({

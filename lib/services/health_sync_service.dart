@@ -1,4 +1,5 @@
 import 'package:calsnap/models/meal_entry.dart';
+import 'package:calsnap/utils/date_format.dart';
 import 'package:flutter/services.dart';
 import 'package:health/health.dart';
 
@@ -20,17 +21,32 @@ class HealthSyncResult {
   final String? recordId;
 }
 
+class HealthConnectDaySummary {
+  const HealthConnectDaySummary({
+    required this.recordCount,
+    required this.totalCalories,
+  });
+
+  final int recordCount;
+  final double totalCalories;
+}
+
 abstract class HealthSyncGateway {
   Future<HealthAvailability> checkAvailability();
   Future<bool> hasWritePermission();
   Future<bool> requestWritePermission();
   Future<void> installHealthConnect();
   Future<HealthSyncResult> writeMeal(MealEntry meal);
+  Future<HealthConnectDaySummary?> readTodaySyncedSummary(DateTime date);
+  Future<bool> openHealthConnectSettings();
 }
 
 class HealthConnectSyncService implements HealthSyncGateway {
   HealthConnectSyncService({Health? health}) : _health = health ?? Health();
 
+  static const MethodChannel _nativeChannel = MethodChannel(
+    'com.clicknow.caloriescount/health_connect',
+  );
   static const List<HealthDataType> _types = <HealthDataType>[
     HealthDataType.NUTRITION,
   ];
@@ -139,6 +155,47 @@ class HealthConnectSyncService implements HealthSyncGateway {
     final startTime = endTime.subtract(const Duration(minutes: 1));
 
     try {
+      // Write via native Kotlin so startZoneOffset and endZoneOffset match local time.
+      final recordId = await _nativeChannel.invokeMethod<String>(
+        'writeNutritionWithZone',
+        <String, Object?>{
+          'startTimeMillis': startTime.millisecondsSinceEpoch,
+          'endTimeMillis': endTime.millisecondsSinceEpoch,
+          'clientRecordId': meal.id,
+          'clientRecordVersion': 1,
+          'name': meal.title,
+          'mealType': _nativeMealTypeKey(meal.category),
+          'calories': meal.totalCalories,
+          'protein': meal.totalProtein,
+          'carbs': meal.totalCarbs,
+          'fat': meal.totalFat,
+        },
+      );
+      return HealthSyncResult(
+        status: HealthSyncStatus.synced,
+        recordId: (recordId == null || recordId.isEmpty) ? meal.id : recordId,
+      );
+    } on MissingPluginException {
+      return _writeViaPluginFallback(meal, startTime, endTime);
+    } on PlatformException catch (e) {
+      return HealthSyncResult(
+        status: HealthSyncStatus.failed,
+        errorMessage: e.message ?? 'Gagal terhubung ke Health Connect.',
+      );
+    } catch (_) {
+      return const HealthSyncResult(
+        status: HealthSyncStatus.failed,
+        errorMessage: 'Terjadi gangguan saat sinkron ke Health Connect.',
+      );
+    }
+  }
+
+  Future<HealthSyncResult> _writeViaPluginFallback(
+    MealEntry meal,
+    DateTime startTime,
+    DateTime endTime,
+  ) async {
+    try {
       final ok = await _health.writeMeal(
         mealType: _mapMealType(meal.category),
         startTime: startTime,
@@ -188,6 +245,67 @@ class HealthConnectSyncService implements HealthSyncGateway {
         status: HealthSyncStatus.failed,
         errorMessage: 'Terjadi gangguan saat sinkron ke Health Connect.',
       );
+    }
+  }
+
+  @override
+  Future<HealthConnectDaySummary?> readTodaySyncedSummary(DateTime date) async {
+    final dayStart = startOfDay(date);
+    final nextDay = DateTime(dayStart.year, dayStart.month, dayStart.day + 1);
+    try {
+      final raw = await _nativeChannel.invokeMethod<Map<Object?, Object?>>(
+        'readOwnNutritionSummary',
+        <String, Object?>{
+          'startTimeMillis': dayStart.millisecondsSinceEpoch,
+          'endTimeMillis': nextDay.millisecondsSinceEpoch,
+        },
+      );
+      if (raw == null) {
+        return null;
+      }
+      final countRaw = raw['count'];
+      final caloriesRaw = raw['calories'];
+      final count = countRaw is num ? countRaw.toInt() : 0;
+      final calories = caloriesRaw is num ? caloriesRaw.toDouble() : 0.0;
+      return HealthConnectDaySummary(
+        recordCount: count,
+        totalCalories: calories,
+      );
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> openHealthConnectSettings() async {
+    try {
+      final opened = await _nativeChannel.invokeMethod<bool>(
+        'openHealthConnectSettings',
+      );
+      return opened ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _nativeMealTypeKey(MealCategory category) {
+    switch (category) {
+      case MealCategory.breakfast:
+        return 'BREAKFAST';
+      case MealCategory.lunch:
+        return 'LUNCH';
+      case MealCategory.dinner:
+        return 'DINNER';
+      case MealCategory.snack:
+        return 'SNACK';
     }
   }
 

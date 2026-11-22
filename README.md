@@ -51,7 +51,7 @@ Requirements:
 If you build locally without CI, generate the Gradle wrapper once inside `android/` before running Flutter:
 
 ```bash
-cd android && gradle wrapper --gradle-version 9.5.0 --distribution-type all
+cd android && gradle wrapper --gradle-version 9.9.2 --distribution-type all
 cd ..
 flutter pub get
 flutter analyze

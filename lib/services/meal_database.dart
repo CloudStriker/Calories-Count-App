@@ -5,6 +5,10 @@ import 'package:sqflite/sqflite.dart';
 
 abstract class MealStore {
   Future<List<MealEntry>> getMealsForDate(DateTime date);
+  Future<Map<DateTime, double>> getDailyCaloriesInRange(
+    DateTime startDate,
+    DateTime endDate,
+  );
   Future<void> insertMeal(MealEntry meal);
   Future<void> updateSyncStatus({
     required String mealId,
@@ -28,7 +32,15 @@ class SqliteMealStore implements MealStore {
     if (existing != null) {
       return existing;
     }
-    return _openingDb ??= _open();
+    final pending = _openingDb ??= _open();
+    try {
+      return await pending;
+    } catch (_) {
+      if (identical(_openingDb, pending)) {
+        _openingDb = null;
+      }
+      rethrow;
+    }
   }
 
   Future<Database> _open() async {
@@ -68,7 +80,7 @@ class SqliteMealStore implements MealStore {
   Future<List<MealEntry>> getMealsForDate(DateTime date) async {
     final db = await _getDb();
     final dayStart = startOfDay(date);
-    final nextDayStart = dayStart.add(const Duration(days: 1));
+    final nextDayStart = DateTime(dayStart.year, dayStart.month, dayStart.day + 1);
     final rows = await db.query(
       _tableName,
       where: 'eaten_at >= ? AND eaten_at < ?',
@@ -79,6 +91,45 @@ class SqliteMealStore implements MealStore {
       orderBy: 'eaten_at DESC',
     );
     return rows.map(MealEntry.fromDbMap).toList();
+  }
+
+  @override
+  Future<Map<DateTime, double>> getDailyCaloriesInRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final db = await _getDb();
+    final rangeStart = startOfDay(startDate);
+    final normalizedEnd = startOfDay(endDate);
+    final rangeEndExclusive = DateTime(
+      normalizedEnd.year,
+      normalizedEnd.month,
+      normalizedEnd.day + 1,
+    );
+    final rows = await db.query(
+      _tableName,
+      columns: const <String>['eaten_at', 'total_calories'],
+      where: 'eaten_at >= ? AND eaten_at < ?',
+      whereArgs: <Object?>[
+        rangeStart.millisecondsSinceEpoch,
+        rangeEndExclusive.millisecondsSinceEpoch,
+      ],
+    );
+    final totals = <DateTime, double>{};
+    for (final row in rows) {
+      final eatenAtMs = row['eaten_at'];
+      final calories = row['total_calories'];
+      if (eatenAtMs is! int || calories is! num) {
+        continue;
+      }
+      final day = startOfDay(DateTime.fromMillisecondsSinceEpoch(eatenAtMs));
+      final value = calories.toDouble();
+      if (value.isNaN || value.isInfinite || value < 0) {
+        continue;
+      }
+      totals[day] = (totals[day] ?? 0) + value;
+    }
+    return totals;
   }
 
   @override

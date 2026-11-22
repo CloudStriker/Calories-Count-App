@@ -30,6 +30,12 @@ class MealCard extends StatelessWidget {
       enableHaptic: true,
       child: Card(
         clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: isDark
+              ? BorderSide(color: Colors.white.withValues(alpha: 0.06))
+              : BorderSide.none,
+        ),
         child: InkWell(
           onTap: onTap,
           child: hasFile
@@ -111,6 +117,10 @@ class MealCard extends StatelessWidget {
                               _CompactSyncIndicator(status: meal.syncStatus),
                             ],
                           ),
+                          if (meal.items.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 10),
+                            _MealItemPreviewChips(items: meal.items),
+                          ],
                           if (meal.syncStatus == HealthSyncStatus.failed)
                             ..._buildRetryStrip(context),
                         ],
@@ -152,6 +162,10 @@ class MealCard extends StatelessWidget {
                       _buildTitleAndCaloriesRow(context),
                       const SizedBox(height: 8),
                       _MacroDotsLine(meal: meal),
+                      if (meal.items.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 10),
+                        _MealItemPreviewChips(items: meal.items),
+                      ],
                       if (meal.syncStatus == HealthSyncStatus.failed)
                         ..._buildRetryStrip(context),
                     ],
@@ -231,6 +245,62 @@ class MealCard extends StatelessWidget {
         ),
       ),
     ];
+  }
+}
+
+class _MealItemPreviewChips extends StatelessWidget {
+  const _MealItemPreviewChips({required this.items});
+
+  final List<FoodItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.calColors;
+    final visible = items.take(3).toList();
+    final remaining = items.length - visible.length;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: <Widget>[
+        for (final item in visible)
+          Container(
+            constraints: const BoxConstraints(maxWidth: 160),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: colors.mutedSurface,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              item.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: colors.mutedText,
+              ),
+            ),
+          ),
+        if (remaining > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: colors.mutedSurface,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '+$remaining lainnya',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: colors.mutedText,
+                fontFeatures: tabularFigures,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 

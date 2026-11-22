@@ -54,6 +54,24 @@ class InMemoryMealStore implements MealStore {
   }
 
   @override
+  Future<Map<DateTime, double>> getDailyCaloriesInRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final rangeStart = startOfDay(startDate);
+    final normalizedEnd = startOfDay(endDate);
+    final totals = <DateTime, double>{};
+    for (final meal in rows) {
+      final day = startOfDay(meal.eatenAt);
+      if (day.isBefore(rangeStart) || day.isAfter(normalizedEnd)) {
+        continue;
+      }
+      totals[day] = (totals[day] ?? 0) + meal.totalCalories;
+    }
+    return totals;
+  }
+
+  @override
   Future<void> insertMeal(MealEntry meal) async {
     rows.removeWhere((existing) => existing.id == meal.id);
     rows.add(meal);
@@ -149,6 +167,8 @@ class FakeHealthSyncGateway implements HealthSyncGateway {
   HealthAvailability availability = HealthAvailability.available;
   bool permitted = true;
   bool shouldFailWrite = false;
+  HealthConnectDaySummary? todaySummary;
+  int openedSettingsCount = 0;
   final List<MealEntry> writtenMeals = <MealEntry>[];
 
   @override
@@ -165,6 +185,16 @@ class FakeHealthSyncGateway implements HealthSyncGateway {
 
   @override
   Future<void> installHealthConnect() async {}
+
+  @override
+  Future<HealthConnectDaySummary?> readTodaySyncedSummary(DateTime date) async =>
+      todaySummary;
+
+  @override
+  Future<bool> openHealthConnectSettings() async {
+    openedSettingsCount += 1;
+    return true;
+  }
 
   @override
   Future<HealthSyncResult> writeMeal(MealEntry meal) async {

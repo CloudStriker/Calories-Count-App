@@ -10,6 +10,7 @@ import 'package:calsnap/utils/date_format.dart';
 import 'package:calsnap/widgets/daily_summary_card.dart';
 import 'package:calsnap/widgets/meal_card.dart';
 import 'package:calsnap/widgets/tactile_press.dart';
+import 'package:calsnap/widgets/weekly_trend_card.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
@@ -277,7 +278,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildCompactBody() {
     final meals = widget.controller.meals;
+    final selectedDate = widget.controller.selectedDate;
+    final weekDays = buildWeekWindow(selectedDate);
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+
     return Stack(
       key: const ValueKey<String>('home-compact-layout'),
       children: <Widget>[
@@ -285,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 108),
           children: <Widget>[
             _WeekDateStrip(
-              selectedDate: widget.controller.selectedDate,
+              selectedDate: selectedDate,
               onSelectDate: widget.controller.selectDate,
             ),
             const SizedBox(height: 12),
@@ -295,10 +299,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               dailyGoal: widget.controller.settings.dailyCalorieGoal,
               eyebrowLabel: _summaryEyebrow(),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            _MealSlotStrip(meals: meals),
+            const SizedBox(height: 18),
             _buildMealListHeader(meals.length),
             const SizedBox(height: 10),
             ..._buildMealListContent(meals),
+            const SizedBox(height: 8),
+            WeeklyTrendCard(
+              days: weekDays,
+              selectedDate: selectedDate,
+              dailyCalories: widget.controller.weeklyCalories,
+              dailyGoal: widget.controller.settings.dailyCalorieGoal,
+              onSelectDate: widget.controller.selectDate,
+            ),
           ],
         ),
         Positioned(
@@ -337,32 +351,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildExpandedBody() {
     final meals = widget.controller.meals;
+    final selectedDate = widget.controller.selectedDate;
+    final weekDays = buildWeekWindow(selectedDate);
     final colors = context.calColors;
+
     return Row(
       key: const ValueKey<String>('home-expanded-layout'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         SizedBox(
-          width: 364,
-          child: ListView(
-            padding: const EdgeInsets.all(12),
+          width: 372,
+          child: Column(
             children: <Widget>[
-              _WeekDateStrip(
-                selectedDate: widget.controller.selectedDate,
-                onSelectDate: widget.controller.selectDate,
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  children: <Widget>[
+                    _WeekDateStrip(
+                      selectedDate: selectedDate,
+                      onSelectDate: widget.controller.selectDate,
+                    ),
+                    const SizedBox(height: 12),
+                    DailySummaryCard(
+                      totals: widget.controller.dailyTotals,
+                      dailyGoal: widget.controller.settings.dailyCalorieGoal,
+                      eyebrowLabel: _summaryEyebrow(),
+                    ),
+                    const SizedBox(height: 12),
+                    WeeklyTrendCard(
+                      days: weekDays,
+                      selectedDate: selectedDate,
+                      dailyCalories: widget.controller.weeklyCalories,
+                      dailyGoal: widget.controller.settings.dailyCalorieGoal,
+                      onSelectDate: widget.controller.selectDate,
+                    ),
+                    const SizedBox(height: 12),
+                    ..._buildSetupBanners(),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              DailySummaryCard(
-                totals: widget.controller.dailyTotals,
-                dailyGoal: widget.controller.settings.dailyCalorieGoal,
-                eyebrowLabel: _summaryEyebrow(),
-              ),
-              const SizedBox(height: 14),
-              ..._buildSetupBanners(),
-              _CaptureActionButtons(
-                isBusy: _isPickingPhoto,
-                onCamera: () => _pickAndAnalyze(ImageSource.camera),
-                onGallery: () => _pickAndAnalyze(ImageSource.gallery),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: colors.border)),
+                ),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: _CaptureActionButtons(
+                  isBusy: _isPickingPhoto,
+                  onCamera: () => _pickAndAnalyze(ImageSource.camera),
+                  onGallery: () => _pickAndAnalyze(ImageSource.gallery),
+                ),
               ),
             ],
           ),
@@ -376,8 +413,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: <Widget>[
+                  _MealSlotStrip(meals: meals),
+                  const SizedBox(height: 16),
                   _buildMealListHeader(meals.length),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   ..._buildMealListContent(meals),
                 ],
               ),
@@ -522,6 +561,132 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const SizedBox(height: 10),
       ],
     ];
+  }
+}
+
+class _MealSlotStrip extends StatelessWidget {
+  const _MealSlotStrip({required this.meals});
+
+  final List<MealEntry> meals;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final colors = context.calColors;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final slotTotals = <MealCategory, double>{
+      for (final cat in MealCategory.values) cat: 0,
+    };
+    for (final meal in meals) {
+      slotTotals[meal.category] =
+          (slotTotals[meal.category] ?? 0) + meal.totalCalories;
+    }
+
+    return Row(
+      key: const ValueKey<String>('home-meal-slots'),
+      children: <Widget>[
+        for (var i = 0; i < MealCategory.values.length; i++) ...<Widget>[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: Builder(
+              builder: (context) {
+                final category = MealCategory.values[i];
+                final kcal = slotTotals[category] ?? 0;
+                final hasData = kcal > 0;
+                final (IconData icon, String shortLabel) = switch (category) {
+                  MealCategory.breakfast => (
+                      Icons.wb_sunny_outlined,
+                      'Sarapan',
+                    ),
+                  MealCategory.lunch => (
+                      Icons.light_mode_outlined,
+                      'Siang',
+                    ),
+                  MealCategory.dinner => (
+                      Icons.nights_stay_outlined,
+                      'Malam',
+                    ),
+                  MealCategory.snack => (
+                      Icons.cookie_outlined,
+                      'Camilan',
+                    ),
+                };
+
+                return Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: isDark
+                        ? BorderSide(
+                            color: Colors.white.withValues(alpha: 0.06),
+                          )
+                        : BorderSide.none,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            ExcludeSemantics(
+                              child: Icon(
+                                icon,
+                                size: 14,
+                                color: hasData
+                                    ? colors.proteinColor
+                                    : colors.mutedText,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                shortLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.mutedText,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            hasData
+                                ? '${formatThousandsId(kcal.round())} kkal'
+                                : '-',
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight:
+                                  hasData ? FontWeight.w700 : FontWeight.w500,
+                              color:
+                                  hasData ? scheme.onSurface : colors.mutedText,
+                              fontFeatures: tabularFigures,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 

@@ -42,6 +42,7 @@ void main() {
 
     expect(saved.syncStatus, HealthSyncStatus.synced);
     expect(controller.meals, hasLength(1));
+    expect(controller.weeklyCalories[DateTime(2026, 11, 21)], 200);
     expect(healthSync.writtenMeals, hasLength(1));
     expect(photoStore.saved, hasLength(1));
   });
@@ -88,6 +89,7 @@ void main() {
 
     await controller.deleteMeal(controller.meals.single);
     expect(controller.meals, isEmpty);
+    expect(controller.weeklyCalories[DateTime(2026, 11, 21)], isNull);
     expect(photoStore.deletedPaths, hasLength(1));
   });
 }

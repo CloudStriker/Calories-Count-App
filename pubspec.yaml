@@ -1,7 +1,7 @@
 name: calsnap
 description: Photo-based food calorie tracker with Gemini vision and Android Health Connect sync for Samsung Health.
 publish_to: 'none'
-version: 0.2.0+3
+version: 0.3.0+4
 
 environment:
   sdk: ">=3.12.0 <4.0.0"

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/screens/home_screen.dart';
+import 'package:calsnap/services/health_sync_service.dart';
 import 'package:calsnap/services/settings_store.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
@@ -83,7 +84,15 @@ void main() {
       find.byKey(const ValueKey<String>('home-week-strip')),
       findsOneWidget,
     );
-    expect(find.text('360 kkal'), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey<String>('home-meal-slots')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('weekly-trend-card')),
+      findsOneWidget,
+    );
+    expect(find.text('360 kkal'), findsNWidgets(3));
     expect(find.text('Nasi Uduk'), findsOneWidget);
 
     for (final ringKey in const <String>[
@@ -123,7 +132,7 @@ void main() {
     await tester.tap(find.text('Nasi Uduk'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nasi uduk'), findsOneWidget);
+    expect(find.text('Komponen Makanan'), findsOneWidget);
     expect(find.text('Hapus Catatan'), findsOneWidget);
 
     await tester.tap(find.text('Hapus Catatan'));
@@ -155,6 +164,14 @@ void main() {
 
     expect(
       find.byKey(const ValueKey<String>('home-expanded-layout')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('weekly-trend-card')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('home-meal-slots')),
       findsOneWidget,
     );
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
@@ -286,7 +303,7 @@ void main() {
 
     await tester.tap(find.text('Nasi Gudeg'));
     await tester.pumpAndSettle();
-    expect(find.text('Nasi gudeg'), findsOneWidget);
+    expect(find.text('Komponen Makanan'), findsOneWidget);
     expect(find.bySemanticsLabel('Foto Nasi Gudeg'), findsNWidgets(2));
 
     await tester.tapAt(const Offset(180, 20));
@@ -300,6 +317,119 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.selectedDate, DateTime(2026, 11, 14));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping trend bar selects date, shows +N lainnya chip, and opens HC settings', (
+    tester,
+  ) async {
+    final mealStore = InMemoryMealStore();
+    await mealStore.insertMeal(
+      MealEntry.fromItems(
+        id: 'many-items',
+        eatenAt: DateTime(2026, 11, 21, 12, 30),
+        category: MealCategory.lunch,
+        title: 'Nasi Padang',
+        items: const <FoodItem>[
+          FoodItem(
+            name: 'Nasi putih',
+            portionLabel: '1 porsi',
+            grams: 150,
+            calories: 200,
+            proteinGrams: 4,
+            carbsGrams: 44,
+            fatGrams: 0.4,
+          ),
+          FoodItem(
+            name: 'Rendang',
+            portionLabel: '1 potong',
+            grams: 90,
+            calories: 250,
+            proteinGrams: 22,
+            carbsGrams: 4,
+            fatGrams: 16,
+          ),
+          FoodItem(
+            name: 'Daun singkong',
+            portionLabel: '1 porsi',
+            grams: 60,
+            calories: 40,
+            proteinGrams: 2,
+            carbsGrams: 5,
+            fatGrams: 1,
+          ),
+          FoodItem(
+            name: 'Sambal ijo',
+            portionLabel: '1 sdm',
+            grams: 20,
+            calories: 35,
+            proteinGrams: 0.5,
+            carbsGrams: 2,
+            fatGrams: 3,
+          ),
+        ],
+        syncStatus: HealthSyncStatus.synced,
+      ),
+    );
+    final healthSync = FakeHealthSyncGateway()
+      ..todaySummary = const HealthConnectDaySummary(
+        recordCount: 2,
+        totalCalories: 850,
+      );
+    final controller = MealLogController(
+      settingsStore: FakeSettingsStore(
+        const AppSettings(apiKey: 'test-key', dailyCalorieGoal: 2000),
+      ),
+      mealStore: mealStore,
+      photoStore: FakePhotoStore(),
+      foodAnalyzer: FakeFoodAnalyzer(),
+      healthSync: healthSync,
+      initialDate: DateTime(2026, 11, 21),
+    );
+    await controller.initialize();
+
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: HomeScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('+1 lainnya'), findsOneWidget);
+
+    final trendCard = find.byKey(const ValueKey<String>('weekly-trend-card'));
+    final jumBar = find.descendant(of: trendCard, matching: find.text('Jum'));
+    await tester.scrollUntilVisible(
+      jumBar,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -140));
+    await tester.pumpAndSettle();
+    await tester.tap(jumBar);
+    await tester.pumpAndSettle();
+    expect(controller.selectedDate, DateTime(2026, 11, 20));
+
+    await tester.tap(find.byTooltip('Pengaturan'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Tercatat di Health Connect hari ini: 2 catatan (850 kkal)'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Buka Health Connect'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Buka Health Connect'));
+    await tester.pumpAndSettle();
+    expect(healthSync.openedSettingsCount, 1);
     expect(tester.takeException(), isNull);
   });
 }

@@ -22,6 +22,7 @@ class DailySummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final colors = context.calColors;
+    final isDark = theme.brightness == Brightness.dark;
     final disableAnimations = MediaQuery.disableAnimationsOf(context);
 
     final goal = dailyGoal <= 0 ? 2000 : dailyGoal;
@@ -32,95 +33,165 @@ class DailySummaryCard extends StatelessWidget {
     final pct = (rawRatio * 100).round().clamp(0, 999);
     final isOver = consumed > goal;
 
-    final macroCalTotal = (totals.proteinGrams * 4) +
-        (totals.carbsGrams * 4) +
-        (totals.fatGrams * 9);
-    final proteinShare =
-        macroCalTotal > 0 ? (totals.proteinGrams * 4) / macroCalTotal : 0.0;
-    final carbsShare =
-        macroCalTotal > 0 ? (totals.carbsGrams * 4) / macroCalTotal : 0.0;
-    final fatShare =
-        macroCalTotal > 0 ? (totals.fatGrams * 9) / macroCalTotal : 0.0;
+    final proteinCal = totals.proteinGrams * 4;
+    final carbsCal = totals.carbsGrams * 4;
+    final fatCal = totals.fatGrams * 9;
+    final macroCalTotal = proteinCal + carbsCal + fatCal;
+    final proteinShare = macroCalTotal > 0 ? proteinCal / macroCalTotal : 0.0;
+    final carbsShare = macroCalTotal > 0 ? carbsCal / macroCalTotal : 0.0;
+    final fatShare = macroCalTotal > 0 ? fatCal / macroCalTotal : 0.0;
+
+    final proteinPct = (proteinShare * 100).round();
+    final carbsPct = (carbsShare * 100).round();
+    final fatPct =
+        macroCalTotal > 0 ? (100 - proteinPct - carbsPct).clamp(0, 100) : 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: isDark
+                ? BorderSide(color: Colors.white.withValues(alpha: 0.06))
+                : BorderSide.none,
+          ),
+          child: DecoratedBox(
+            decoration: isDark
+                ? const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: <Color>[Color(0xFF1A1B1F), Color(0xFF151515)],
+                    ),
+                  )
+                : const BoxDecoration(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
-                      Text(
-                        eyebrowLabel,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colors.mutedText,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.9,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text.rich(
-                        TextSpan(
-                          children: <InlineSpan>[
-                            TextSpan(
-                              text: formatThousandsId(consumed),
-                              style: TextStyle(
-                                fontSize: 34,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.8,
-                                height: 1.05,
-                                color: scheme.onSurface,
-                                fontFeatures: tabularFigures,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              eyebrowLabel,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colors.mutedText,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.9,
                               ),
                             ),
-                            TextSpan(
-                              text: ' kkal',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: scheme.onSurface.withValues(alpha: 0.78),
+                            const SizedBox(height: 6),
+                            Text.rich(
+                              TextSpan(
+                                children: <InlineSpan>[
+                                  TextSpan(
+                                    text: formatThousandsId(consumed),
+                                    style: TextStyle(
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.8,
+                                      height: 1.05,
+                                      color: scheme.onSurface,
+                                      fontFeatures: tabularFigures,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' kkal',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      color: scheme.onSurface.withValues(
+                                        alpha: 0.78,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              isOver
+                                  ? 'Lebih ${formatThousandsId(delta.abs())} dari ${formatThousandsId(goal)} kkal'
+                                  : 'Sisa ${formatThousandsId(delta)} dari ${formatThousandsId(goal)} kkal',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color:
+                                    isOver ? colors.warningFg : colors.mutedText,
+                                fontWeight:
+                                    isOver ? FontWeight.w600 : FontWeight.w500,
+                                fontFeatures: tabularFigures,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        isOver
-                            ? 'Lebih ${formatThousandsId(delta.abs())} dari ${formatThousandsId(goal)} kkal'
-                            : 'Sisa ${formatThousandsId(delta)} dari ${formatThousandsId(goal)} kkal',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isOver ? colors.warningFg : colors.mutedText,
-                          fontWeight: isOver ? FontWeight.w600 : FontWeight.w500,
-                          fontFeatures: tabularFigures,
+                      const SizedBox(width: 14),
+                      _ProgressRing(
+                        key: const ValueKey<String>('calorie-progress-ring'),
+                        size: 84,
+                        strokeWidth: 7.5,
+                        progress: progress,
+                        ringColor: isOver ? colors.warningFg : scheme.primary,
+                        trackColor: colors.mutedSurface,
+                        disableAnimations: disableAnimations,
+                        center: Text(
+                          '$pct%',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: tabularFigures,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 14),
-                _ProgressRing(
-                  key: const ValueKey<String>('calorie-progress-ring'),
-                  size: 84,
-                  strokeWidth: 7.5,
-                  progress: progress,
-                  ringColor: isOver ? colors.warningFg : scheme.primary,
-                  trackColor: colors.mutedSurface,
-                  disableAnimations: disableAnimations,
-                  center: Text(
-                    '$pct%',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: SizedBox(
+                      height: 6,
+                      child: macroCalTotal <= 0
+                          ? ColoredBox(color: colors.mutedSurface)
+                          : Row(
+                              children: <Widget>[
+                                if (proteinCal > 0)
+                                  Expanded(
+                                    flex: math.max(1, proteinCal.round()),
+                                    child: ColoredBox(color: colors.proteinColor),
+                                  ),
+                                if (carbsCal > 0)
+                                  Expanded(
+                                    flex: math.max(1, carbsCal.round()),
+                                    child: ColoredBox(color: colors.carbsColor),
+                                  ),
+                                if (fatCal > 0)
+                                  Expanded(
+                                    flex: math.max(1, fatCal.round()),
+                                    child: ColoredBox(color: colors.fatColor),
+                                  ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    macroCalTotal <= 0
+                        ? 'Belum ada data makro hari ini'
+                        : 'Proporsi kalori: P $proteinPct% · K $carbsPct% · L $fatPct%',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: colors.mutedText,
                       fontFeatures: tabularFigures,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -289,9 +360,13 @@ class _MacroRingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.calColors;
+    final isDark = theme.brightness == Brightness.dark;
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
+        side: isDark
+            ? BorderSide(color: Colors.white.withValues(alpha: 0.06))
+            : BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),

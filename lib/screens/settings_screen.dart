@@ -2,6 +2,7 @@ import 'package:calsnap/services/health_sync_service.dart';
 import 'package:calsnap/services/settings_store.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
+import 'package:calsnap/utils/date_format.dart';
 import 'package:calsnap/widgets/tactile_press.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -136,6 +137,17 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (mounted) {
         setState(() => _isConnectingHealth = false);
       }
+    }
+  }
+
+  Future<void> _openHealthConnectSettings() async {
+    final opened = await widget.controller.openHealthConnectSettings();
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak dapat membuka pengaturan Health Connect.'),
+        ),
+      );
     }
   }
 
@@ -315,6 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               availability: widget.controller.healthAvailability,
                               hasPermission:
                                   widget.controller.hasHealthPermission,
+                              todaySummary: widget.controller.todayHealthSummary,
                             ),
                             const SizedBox(height: 12),
                             Wrap(
@@ -346,6 +359,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   icon: const Icon(Icons.refresh_rounded),
                                   label: const Text('Segarkan'),
                                 ),
+                                OutlinedButton.icon(
+                                  onPressed: _openHealthConnectSettings,
+                                  icon: const Icon(Icons.open_in_new_rounded),
+                                  label: const Text('Buka Health Connect'),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 14),
@@ -368,9 +386,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    '1. Buka Samsung Health > Pengaturan > Health Connect.\n'
-                                    '2. Aktifkan izin Baca (Read) untuk Nutrisi (Nutrition).\n'
-                                    '3. Aktifkan Sync with Samsung Cloud agar catatan muncul otomatis di Food Tracker.',
+                                    '1. Ketuk Buka Health Connect lalu cek Data & akses > Nutrisi untuk memastikan catatan CalSnap masuk.\n'
+                                    '2. Di Health Connect > Izin aplikasi > Samsung Health, aktifkan Baca (Read) untuk Nutrisi.\n'
+                                    '3. Buka Samsung Health > Pengaturan > Sync with Samsung Cloud, lalu tarik layar beranda untuk menyinkronkan.',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
@@ -496,10 +514,12 @@ class _HealthStatusRow extends StatelessWidget {
   const _HealthStatusRow({
     required this.availability,
     required this.hasPermission,
+    this.todaySummary,
   });
 
   final HealthAvailability availability;
   final bool hasPermission;
+  final HealthConnectDaySummary? todaySummary;
 
   @override
   Widget build(BuildContext context) {
@@ -531,6 +551,10 @@ class _HealthStatusRow extends StatelessWidget {
           colors.errorFg,
         ),
     };
+    final summary = todaySummary;
+    final showDiagnostic = availability == HealthAvailability.available &&
+        hasPermission &&
+        summary != null;
 
     return Container(
       width: double.infinity,
@@ -539,19 +563,36 @@ class _HealthStatusRow extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          ExcludeSemantics(child: Icon(icon, size: 18, color: fg)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          Row(
+            children: <Widget>[
+              ExcludeSemantics(child: Icon(icon, size: 18, color: fg)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: fg,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          if (showDiagnostic) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              summary.recordCount > 0
+                  ? 'Tercatat di Health Connect hari ini: ${summary.recordCount} catatan (${formatThousandsId(summary.totalCalories.round())} kkal)'
+                  : 'Belum ada catatan CalSnap di Health Connect hari ini',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: fg,
-                    fontWeight: FontWeight.w700,
+                    fontFeatures: tabularFigures,
                   ),
             ),
-          ),
+          ],
         ],
       ),
     );
