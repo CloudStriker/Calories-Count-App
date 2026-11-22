@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/screens/home_screen.dart';
+import 'package:calsnap/screens/settings_screen.dart';
 import 'package:calsnap/services/health_sync_service.dart';
 import 'package:calsnap/services/settings_store.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
@@ -312,6 +313,9 @@ void main() {
     await tester.tapAt(const Offset(180, 20));
     await tester.pumpAndSettle();
 
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 260));
+    await tester.pumpAndSettle();
+
     await tester.fling(
       find.byKey(const ValueKey<String>('home-week-strip')),
       const Offset(300, 0),
@@ -421,13 +425,19 @@ void main() {
 
     await tester.tap(find.byTooltip('Pengaturan'));
     await tester.pumpAndSettle();
+    final settingsScrollable = find
+        .descendant(
+          of: find.byType(SettingsScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
     final diagnosticFinder = find.text(
       'Tercatat di Health Connect hari ini: 2 catatan (850 kkal)',
     );
     await tester.scrollUntilVisible(
       diagnosticFinder,
       200,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: settingsScrollable,
     );
     await tester.pumpAndSettle();
     expect(diagnosticFinder, findsOneWidget);
@@ -435,7 +445,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Buka Health Connect'),
       200,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: settingsScrollable,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Buka Health Connect'));
