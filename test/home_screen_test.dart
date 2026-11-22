@@ -287,7 +287,7 @@ void main() {
     await tester.tap(find.text('Nasi Gudeg'));
     await tester.pumpAndSettle();
     expect(find.text('Nasi gudeg'), findsOneWidget);
-    expect(find.bySemanticsLabel('Foto Nasi Gudeg'), findsOneWidget);
+    expect(find.bySemanticsLabel('Foto Nasi Gudeg'), findsNWidgets(2));
 
     await tester.tapAt(const Offset(180, 20));
     await tester.pumpAndSettle();
