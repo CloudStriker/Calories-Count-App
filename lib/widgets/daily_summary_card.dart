@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:calsnap/models/meal_entry.dart';
 import 'package:calsnap/theme/app_theme.dart';
+import 'package:calsnap/utils/date_format.dart';
 import 'package:material_ui/material_ui.dart';
 
 class DailySummaryCard extends StatelessWidget {
@@ -9,10 +10,12 @@ class DailySummaryCard extends StatelessWidget {
     super.key,
     required this.totals,
     required this.dailyGoal,
+    this.eyebrowLabel = 'KALORI HARI INI',
   });
 
   final DailyTotals totals;
   final int dailyGoal;
+  final String eyebrowLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -39,22 +42,13 @@ class DailySummaryCard extends StatelessWidget {
     final fatShare =
         macroCalTotal > 0 ? (totals.fatGrams * 9) / macroCalTotal : 0.0;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'RINGKASAN HARI INI',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colors.mutedText,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.9,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 Expanded(
@@ -62,159 +56,182 @@ class DailySummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        '$consumed kkal',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: scheme.onSurface,
-                          fontFeatures: tabularFigures,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Target $goal kkal',
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        eyebrowLabel,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: colors.mutedText,
-                          fontWeight: FontWeight.w500,
-                          fontFeatures: tabularFigures,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.9,
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+                      const SizedBox(height: 6),
+                      Text.rich(
+                        TextSpan(
+                          children: <InlineSpan>[
+                            TextSpan(
+                              text: formatThousandsId(consumed),
+                              style: TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.8,
+                                height: 1.05,
+                                color: scheme.onSurface,
+                                fontFeatures: tabularFigures,
+                              ),
+                            ),
+                            TextSpan(
+                              text: ' kkal',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurface.withValues(alpha: 0.78),
+                              ),
+                            ),
+                          ],
                         ),
-                        decoration: BoxDecoration(
-                          color: isOver ? colors.warningBg : colors.mutedSurface,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          isOver
-                              ? 'Lebih ${delta.abs()} kkal · ${totals.mealCount} catatan'
-                              : 'Sisa $delta kkal · ${totals.mealCount} catatan',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: isOver ? colors.warningFg : colors.mutedText,
-                            fontWeight: FontWeight.w700,
-                            fontFeatures: tabularFigures,
-                          ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        isOver
+                            ? 'Lebih ${formatThousandsId(delta.abs())} dari ${formatThousandsId(goal)} kkal'
+                            : 'Sisa ${formatThousandsId(delta)} dari ${formatThousandsId(goal)} kkal',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isOver ? colors.warningFg : colors.mutedText,
+                          fontWeight: isOver ? FontWeight.w600 : FontWeight.w500,
+                          fontFeatures: tabularFigures,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 14),
-                _CalorieRing(
+                _ProgressRing(
+                  key: const ValueKey<String>('calorie-progress-ring'),
+                  size: 84,
+                  strokeWidth: 7.5,
                   progress: progress,
-                  percentLabel: '$pct%',
-                  ringColor: isOver ? scheme.secondary : scheme.primary,
+                  ringColor: isOver ? colors.warningFg : scheme.primary,
                   trackColor: colors.mutedSurface,
                   disableAnimations: disableAnimations,
+                  center: Text(
+                    '$pct%',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: tabularFigures,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _MacroChip(
-                    label: 'Protein',
-                    grams: totals.proteinGrams,
-                    share: proteinShare,
-                    accentColor: colors.proteinColor,
-                    disableAnimations: disableAnimations,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MacroChip(
-                    label: 'Karbo',
-                    grams: totals.carbsGrams,
-                    share: carbsShare,
-                    accentColor: colors.carbsColor,
-                    disableAnimations: disableAnimations,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MacroChip(
-                    label: 'Lemak',
-                    grams: totals.fatGrams,
-                    share: fatShare,
-                    accentColor: colors.fatColor,
-                    disableAnimations: disableAnimations,
-                  ),
-                ),
-              ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _MacroRingCard(
+                key: const ValueKey<String>('macro-ring-protein'),
+                badge: 'P',
+                label: 'Protein',
+                grams: totals.proteinGrams,
+                share: proteinShare,
+                accentColor: colors.proteinColor,
+                disableAnimations: disableAnimations,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _MacroRingCard(
+                key: const ValueKey<String>('macro-ring-carbs'),
+                badge: 'K',
+                label: 'Karbo',
+                grams: totals.carbsGrams,
+                share: carbsShare,
+                accentColor: colors.carbsColor,
+                disableAnimations: disableAnimations,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _MacroRingCard(
+                key: const ValueKey<String>('macro-ring-fat'),
+                badge: 'L',
+                label: 'Lemak',
+                grams: totals.fatGrams,
+                share: fatShare,
+                accentColor: colors.fatColor,
+                disableAnimations: disableAnimations,
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
 
-class _CalorieRing extends StatelessWidget {
-  const _CalorieRing({
+class _ProgressRing extends StatelessWidget {
+  const _ProgressRing({
+    super.key,
+    required this.size,
+    required this.strokeWidth,
     required this.progress,
-    required this.percentLabel,
     required this.ringColor,
     required this.trackColor,
     required this.disableAnimations,
+    required this.center,
   });
 
+  final double size;
+  final double strokeWidth;
   final double progress;
-  final String percentLabel;
   final Color ringColor;
   final Color trackColor;
   final bool disableAnimations;
+  final Widget center;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 84,
-      height: 84,
+      width: size,
+      height: size,
       child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: 0, end: progress),
+        tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
         duration: disableAnimations
             ? Duration.zero
             : const Duration(milliseconds: 360),
         curve: CalSnapMotion.easeOut,
-        builder: (context, animatedProgress, _) {
+        builder: (context, animatedProgress, child) {
           return CustomPaint(
-            painter: _CalorieRingPainter(
+            painter: _RingPainter(
               progress: animatedProgress,
+              strokeWidth: strokeWidth,
               ringColor: ringColor,
               trackColor: trackColor,
             ),
-            child: Center(
-              child: Text(
-                percentLabel,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontFeatures: tabularFigures,
-                    ),
-              ),
-            ),
+            child: child,
           );
         },
+        child: Center(child: center),
       ),
     );
   }
 }
 
-class _CalorieRingPainter extends CustomPainter {
-  const _CalorieRingPainter({
+class _RingPainter extends CustomPainter {
+  const _RingPainter({
     required this.progress,
+    required this.strokeWidth,
     required this.ringColor,
     required this.trackColor,
   });
 
   final double progress;
+  final double strokeWidth;
   final Color ringColor;
   final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const strokeWidth = 8.0;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
 
@@ -243,14 +260,17 @@ class _CalorieRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CalorieRingPainter oldDelegate) =>
+  bool shouldRepaint(_RingPainter oldDelegate) =>
       oldDelegate.progress != progress ||
+      oldDelegate.strokeWidth != strokeWidth ||
       oldDelegate.ringColor != ringColor ||
       oldDelegate.trackColor != trackColor;
 }
 
-class _MacroChip extends StatelessWidget {
-  const _MacroChip({
+class _MacroRingCard extends StatelessWidget {
+  const _MacroRingCard({
+    super.key,
+    required this.badge,
     required this.label,
     required this.grams,
     required this.share,
@@ -258,6 +278,7 @@ class _MacroChip extends StatelessWidget {
     required this.disableAnimations,
   });
 
+  final String badge;
   final String label;
   final double grams;
   final double share;
@@ -268,72 +289,98 @@ class _MacroChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.calColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: colors.mutedSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: colors.mutedText,
-                    fontWeight: FontWeight.w600,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                _ProgressRing(
+                  size: 30,
+                  strokeWidth: 3.5,
+                  progress: share,
+                  ringColor: accentColor,
+                  trackColor: colors.mutedSurface,
+                  disableAnimations: disableAnimations,
+                  center: Text(
+                    badge,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: accentColor,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${grams.round()} g',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              fontFeatures: tabularFigures,
-            ),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: SizedBox(
-              height: 4,
-              child: Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  ColoredBox(color: colors.border),
-                  AnimatedFractionallySizedBox(
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    duration: disableAnimations
-                        ? Duration.zero
-                        : CalSnapMotion.transitionDuration,
-                    curve: CalSnapMotion.easeOut,
-                    widthFactor: share.clamp(0.0, 1.0),
-                    heightFactor: 1.0,
-                    child: ColoredBox(color: accentColor),
+                    child: Text(
+                      '${grams.round()} g',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.onSurface,
+                        fontFeatures: tabularFigures,
+                      ),
+                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: colors.mutedText,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class MacroPill extends StatelessWidget {
+  const MacroPill({
+    super.key,
+    required this.label,
+    required this.accentColor,
+  });
+
+  final String label;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: isDark ? 0.22 : 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: accentColor,
+          fontFeatures: tabularFigures,
+        ),
       ),
     );
   }

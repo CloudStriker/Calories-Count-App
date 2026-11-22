@@ -10,257 +10,343 @@ class MealCard extends StatelessWidget {
   const MealCard({
     super.key,
     required this.meal,
+    required this.onTap,
     required this.onRetrySync,
-    required this.onDelete,
   });
 
   final MealEntry meal;
+  final VoidCallback onTap;
   final VoidCallback onRetrySync;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.calColors;
+    final isDark = theme.brightness == Brightness.dark;
+    final path = meal.photoPath;
+    final hasFile = path != null && path.isNotEmpty && File(path).existsSync();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _MealThumbnail(photoPath: meal.photoPath),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        meal.title,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+    return TactilePress(
+      enableHaptic: true,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: hasFile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(
+                      height: 160,
+                      width: double.infinity,
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: <Widget>[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
+                          Image.file(
+                            File(path),
+                            fit: BoxFit.cover,
+                            semanticLabel: 'Foto ${meal.title}',
+                            errorBuilder: (_, _, _) => Container(
                               color: colors.mutedSurface,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colors.mutedText,
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: tabularFigures,
+                              child: Center(
+                                child: Icon(
+                                  Icons.restaurant_rounded,
+                                  size: 32,
+                                  color: colors.mutedText,
+                                ),
                               ),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
+                          if (isDark)
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: const <double>[0.45, 1.0],
+                                  colors: <Color>[
+                                    Colors.transparent,
+                                    theme.colorScheme.surface,
+                                  ],
+                                ),
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '${meal.totalCalories.round()} kkal',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer,
-                                fontWeight: FontWeight.w800,
-                                fontFeatures: tabularFigures,
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xBD0A0A0A),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: tabularFigures,
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'P ${meal.totalProtein.round()}g · K ${meal.totalCarbs.round()}g · L ${meal.totalFat.round()}g',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.mutedText,
-                          fontFeatures: tabularFigures,
-                        ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _buildTitleAndCaloriesRow(context),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: <Widget>[
+                              Expanded(child: _MacroDotsLine(meal: meal)),
+                              const SizedBox(width: 8),
+                              _CompactSyncIndicator(status: meal.syncStatus),
+                            ],
+                          ),
+                          if (meal.syncStatus == HealthSyncStatus.failed)
+                            ..._buildRetryStrip(context),
+                        ],
                       ),
+                    ),
+                  ],
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.mutedSurface,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${meal.category.labelId} · ${formatTimeHm(meal.eatenAt)}',
+                              style: TextStyle(
+                                color: colors.mutedText,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: tabularFigures,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          _CompactSyncIndicator(status: meal.syncStatus),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _buildTitleAndCaloriesRow(context),
+                      const SizedBox(height: 8),
+                      _MacroDotsLine(meal: meal),
+                      if (meal.syncStatus == HealthSyncStatus.failed)
+                        ..._buildRetryStrip(context),
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: onDelete,
-                  tooltip: 'Hapus catatan',
-                  icon: Icon(
-                    Icons.delete_outline_rounded,
-                    color: colors.mutedText,
-                  ),
-                ),
-              ],
-            ),
-            if (meal.items.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 10),
-              Text(
-                meal.items
-                    .map((item) => '${item.name} (${item.calories.round()} kkal)')
-                    .join(', '),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.mutedText,
-                ),
-              ),
-            ],
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                _SyncStatusBadge(status: meal.syncStatus),
-                if (meal.syncStatus == HealthSyncStatus.failed ||
-                    meal.syncStatus == HealthSyncStatus.pending)
-                  TactilePress(
-                    child: TextButton.icon(
-                      onPressed: onRetrySync,
-                      icon: const Icon(Icons.sync_rounded, size: 18),
-                      label: Text(
-                        meal.syncStatus == HealthSyncStatus.failed
-                            ? 'Coba Lagi'
-                            : 'Sinkronkan',
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (meal.syncStatus == HealthSyncStatus.failed &&
-                meal.syncError != null &&
-                meal.syncError!.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 4),
-              Text(
-                meal.syncError!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.errorFg,
-                ),
-              ),
-            ],
-          ],
         ),
       ),
     );
   }
+
+  Widget _buildTitleAndCaloriesRow(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            meal.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '${meal.totalCalories.round()} kkal',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: theme.colorScheme.onSurface,
+            fontFeatures: tabularFigures,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildRetryStrip(BuildContext context) {
+    final colors = context.calColors;
+    final message = (meal.syncError != null && meal.syncError!.isNotEmpty)
+        ? meal.syncError!
+        : 'Gagal sinkron ke Health Connect';
+    return <Widget>[
+      const SizedBox(height: 10),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.errorBg,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.errorFg,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: colors.errorFg,
+                minimumSize: const Size(48, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              onPressed: onRetrySync,
+              icon: const Icon(Icons.sync_rounded, size: 16),
+              label: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
 }
 
-class _MealThumbnail extends StatelessWidget {
-  const _MealThumbnail({required this.photoPath});
+class _MacroDotsLine extends StatelessWidget {
+  const _MacroDotsLine({required this.meal});
 
-  final String? photoPath;
+  final MealEntry meal;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.calColors;
-    final path = photoPath;
-    final hasFile = path != null && path.isNotEmpty && File(path).existsSync();
-
-    return Container(
-      width: 76,
-      height: 76,
-      decoration: BoxDecoration(
-        color: colors.mutedSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: hasFile
-          ? Image.file(
-              File(path),
-              fit: BoxFit.cover,
-              semanticLabel: 'Foto makanan',
-              errorBuilder: (_, _, _) => _fallbackIcon(context),
-            )
-          : _fallbackIcon(context),
+    final valueStyle = TextStyle(
+      fontSize: 12.5,
+      color: colors.mutedText,
+      fontWeight: FontWeight.w600,
+      fontFeatures: tabularFigures,
     );
-  }
-
-  Widget _fallbackIcon(BuildContext context) {
-    return Center(
-      child: Icon(
-        Icons.restaurant_rounded,
-        color: Theme.of(context).colorScheme.primary,
-        size: 28,
+    return Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(
+            text: 'P',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: colors.proteinColor,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          TextSpan(
+            text: ' ${meal.totalProtein.round()}g   ',
+            style: valueStyle,
+          ),
+          TextSpan(
+            text: 'K',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: colors.carbsColor,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          TextSpan(
+            text: ' ${meal.totalCarbs.round()}g   ',
+            style: valueStyle,
+          ),
+          TextSpan(
+            text: 'L',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: colors.fatColor,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          TextSpan(
+            text: ' ${meal.totalFat.round()}g',
+            style: valueStyle,
+          ),
+        ],
       ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
 
-class _SyncStatusBadge extends StatelessWidget {
-  const _SyncStatusBadge({required this.status});
+class _CompactSyncIndicator extends StatelessWidget {
+  const _CompactSyncIndicator({required this.status});
 
   final HealthSyncStatus status;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.calColors;
-    final (IconData icon, String label, Color bg, Color fg) = switch (status) {
+    final (IconData icon, String label, Color iconColor, Color textColor) =
+        switch (status) {
       HealthSyncStatus.synced => (
           Icons.check_circle_rounded,
-          'Tersinkron ke Health Connect',
-          colors.successBg,
+          'Health',
           colors.successFg,
+          colors.mutedText,
         ),
       HealthSyncStatus.failed => (
           Icons.error_outline_rounded,
-          'Gagal sinkron',
-          colors.errorBg,
+          'Gagal',
+          colors.errorFg,
           colors.errorFg,
         ),
       HealthSyncStatus.pending => (
           Icons.schedule_rounded,
-          'Belum sinkron',
-          colors.warningBg,
+          'Tertunda',
+          colors.warningFg,
           colors.warningFg,
         ),
       HealthSyncStatus.skipped => (
           Icons.save_alt_rounded,
-          'Tersimpan lokal',
-          colors.mutedSurface,
+          'Lokal',
+          colors.mutedText,
           colors.mutedText,
         ),
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ExcludeSemantics(
-            child: Icon(icon, size: 16, color: fg),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        ExcludeSemantics(
+          child: Icon(icon, size: 15, color: iconColor),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: textColor,
           ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: fg,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

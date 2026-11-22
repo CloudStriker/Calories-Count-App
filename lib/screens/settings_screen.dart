@@ -222,15 +222,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 return Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
-                                  children: presetGeminiModels.map((model) {
-                                    return ChoiceChip(
-                                      label: Text(model),
-                                      selected: current == model,
-                                      onSelected: (_) {
-                                        _modelController.text = model;
-                                      },
-                                    );
-                                  }).toList(),
+                                children: presetGeminiModels.map((model) {
+                                  final isSelected = current == model;
+                                  final scheme = Theme.of(context).colorScheme;
+                                  return ChoiceChip(
+                                    label: Text(model),
+                                    selected: isSelected,
+                                    labelStyle: TextStyle(
+                                      color: isSelected
+                                          ? scheme.onPrimary
+                                          : scheme.onSurface,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    onSelected: (_) {
+                                      _modelController.text = model;
+                                    },
+                                  );
+                                }).toList(),
                                 );
                               },
                             ),
@@ -343,11 +351,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                             const SizedBox(height: 14),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: colors.mutedSurface,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: colors.border),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

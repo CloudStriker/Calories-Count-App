@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:calsnap/models/meal_entry.dart';
@@ -5,10 +6,19 @@ import 'package:calsnap/screens/home_screen.dart';
 import 'package:calsnap/services/settings_store.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'fakes.dart';
+
+final Uint8List _validPngBytes = Uint8List.fromList(const <int>[
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+  0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+]);
 
 void main() {
   Future<MealLogController> buildSeededController() async {
@@ -65,16 +75,64 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey<String>('home-compact-layout')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('home-compact-layout')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('home-week-strip')),
+      findsOneWidget,
+    );
     expect(find.text('360 kkal'), findsNWidgets(2));
     expect(find.text('Nasi Uduk'), findsOneWidget);
-    final macroBarFill = find.descendant(
-      of: find.byType(AnimatedFractionallySizedBox).first,
-      matching: find.byType(ColoredBox),
+
+    for (final ringKey in const <String>[
+      'calorie-progress-ring',
+      'macro-ring-protein',
+      'macro-ring-carbs',
+      'macro-ring-fat',
+    ]) {
+      final finder = find.byKey(ValueKey<String>(ringKey));
+      expect(finder, findsOneWidget);
+      final size = tester.getSize(finder);
+      expect(size.width, greaterThan(0));
+      expect(size.height, greaterThan(0));
+    }
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'tapping meal card opens detail bottom sheet and allows deleting meal', (
+    tester,
+  ) async {
+    final controller = await buildSeededController();
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: HomeScreen(controller: controller),
+      ),
     );
-    final barSize = tester.getSize(macroBarFill);
-    expect(barSize.height, 4.0);
-    expect(barSize.width, greaterThan(0));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Nasi Uduk'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nasi uduk'), findsOneWidget);
+    expect(find.text('Hapus Catatan'), findsOneWidget);
+
+    await tester.tap(find.text('Hapus Catatan'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Hapus'));
+    await tester.pumpAndSettle();
+
+    expect(controller.meals, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
@@ -95,7 +153,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey<String>('home-expanded-layout')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('home-expanded-layout')),
+      findsOneWidget,
+    );
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    expect(scaffold.backgroundColor ?? Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor, const Color(0xFF0A0A0A));
     expect(find.text('Nasi Uduk'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -103,15 +166,6 @@ void main() {
   testWidgets('camera pick -> analyze -> save flow stores and syncs meal', (
     tester,
   ) async {
-    // Valid 1x1 transparent PNG so Image.memory decodes without codec errors.
-    final validPngBytes = Uint8List.fromList(const <int>[
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
-      0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-      0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
-      0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
-    ]);
     final controller = await buildSeededController();
     tester.view.physicalSize = const Size(412, 915);
     tester.view.devicePixelRatio = 1.0;
@@ -124,7 +178,7 @@ void main() {
         home: HomeScreen(
           controller: controller,
           photoPicker: (_) async => PickedPhotoData(
-            bytes: validPngBytes,
+            bytes: _validPngBytes,
             mimeType: 'image/png',
           ),
         ),
@@ -170,6 +224,82 @@ void main() {
 
     expect(find.text('18%'), findsOneWidget);
     expect(find.text('Nasi Uduk'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'renders photo banner meal card, detail sheet photo, and swipes week strip',
+      (tester) async {
+    final tempDir = Directory.systemTemp.createTempSync('calsnap_test_');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+    final photoFile = File('${tempDir.path}/meal.png')
+      ..writeAsBytesSync(_validPngBytes);
+
+    final mealStore = InMemoryMealStore();
+    await mealStore.insertMeal(
+      MealEntry.fromItems(
+        id: 'photo-1',
+        eatenAt: DateTime(2026, 11, 21, 12, 30),
+        category: MealCategory.lunch,
+        title: 'Nasi Gudeg',
+        photoPath: photoFile.path,
+        items: const <FoodItem>[
+          FoodItem(
+            name: 'Nasi gudeg',
+            portionLabel: '1 porsi',
+            grams: 280,
+            calories: 520,
+            proteinGrams: 18,
+            carbsGrams: 64,
+            fatGrams: 19,
+          ),
+        ],
+        syncStatus: HealthSyncStatus.synced,
+      ),
+    );
+    final controller = MealLogController(
+      settingsStore: FakeSettingsStore(
+        const AppSettings(apiKey: 'test-key', dailyCalorieGoal: 2000),
+      ),
+      mealStore: mealStore,
+      photoStore: FakePhotoStore(),
+      foodAnalyzer: FakeFoodAnalyzer(),
+      healthSync: FakeHealthSyncGateway(),
+      initialDate: DateTime(2026, 11, 21),
+    );
+    await controller.initialize();
+
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: HomeScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Foto Nasi Gudeg'), findsOneWidget);
+
+    await tester.tap(find.text('Nasi Gudeg'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nasi gudeg'), findsOneWidget);
+    expect(find.bySemanticsLabel('Foto Nasi Gudeg'), findsOneWidget);
+
+    await tester.tapAt(const Offset(180, 20));
+    await tester.pumpAndSettle();
+
+    await tester.fling(
+      find.byKey(const ValueKey<String>('home-week-strip')),
+      const Offset(300, 0),
+      800,
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedDate, DateTime(2026, 11, 14));
     expect(tester.takeException(), isNull);
   });
 }

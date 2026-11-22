@@ -5,6 +5,7 @@ import 'package:calsnap/screens/settings_screen.dart';
 import 'package:calsnap/services/food_analyzer.dart';
 import 'package:calsnap/state/meal_log_controller.dart';
 import 'package:calsnap/theme/app_theme.dart';
+import 'package:calsnap/widgets/daily_summary_card.dart';
 import 'package:calsnap/widgets/tactile_press.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -244,6 +245,18 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
           padding: const EdgeInsets.all(16),
           children: <Widget>[
             _PhotoPreview(bytes: widget.imageBytes, maxHeight: 280),
+            if (_isAnalyzing) ...<Widget>[
+              const SizedBox(height: 12),
+              const _AiGradientBar(animate: true, height: 4),
+              const SizedBox(height: 8),
+              Text(
+                'Gemini sedang menganalisis foto...',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.mutedText,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: _noteController,
@@ -284,7 +297,7 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
                         ],
                       ),
                       if (showSettingsShortcut) ...<Widget>[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Align(
                           alignment: Alignment.centerRight,
                           child: OutlinedButton.icon(
@@ -378,7 +391,7 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
             _buildMetadataFields(),
             const SizedBox(height: 14),
             _buildTotalsSummary(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             ..._buildItemsSection(),
           ],
         );
@@ -387,6 +400,7 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
   }
 
   Widget _buildMetadataFields() {
+    final scheme = Theme.of(context).colorScheme;
     final colors = context.calColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,7 +411,7 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
             labelText: 'Nama Hidangan',
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         Text(
           'Waktu Makan',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -409,9 +423,14 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
           spacing: 8,
           runSpacing: 8,
           children: MealCategory.values.map((category) {
+            final isSelected = _category == category;
             return ChoiceChip(
               label: Text(category.labelId),
-              selected: _category == category,
+              selected: isSelected,
+              labelStyle: TextStyle(
+                color: isSelected ? scheme.onPrimary : scheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
               onSelected: (_) => setState(() => _category = category),
             );
           }).toList(),
@@ -420,11 +439,10 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: colors.mutedSurface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: colors.border),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
               _aiNotes!,
@@ -441,36 +459,53 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
   Widget _buildTotalsSummary() {
     final totals = DailyTotals.fromItems(_items);
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final colors = context.calColors;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            const _AiGradientBar(animate: false, height: 3),
+            const SizedBox(height: 12),
             Text(
-              'Total Estimasi',
-              style: theme.textTheme.labelLarge?.copyWith(
+              'TOTAL ESTIMASI',
+              style: theme.textTheme.labelSmall?.copyWith(
                 color: colors.mutedText,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${totals.calories.round()} kkal',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: theme.colorScheme.primary,
-                fontFeatures: tabularFigures,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.9,
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Protein ${totals.proteinGrams.round()}g · Karbo ${totals.carbsGrams.round()}g · Lemak ${totals.fatGrams.round()}g',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.mutedText,
-                fontWeight: FontWeight.w600,
+              '${totals.calories.round()} kkal',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.6,
+                color: scheme.onSurface,
                 fontFeatures: tabularFigures,
               ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                MacroPill(
+                  label: 'P ${totals.proteinGrams.round()}g',
+                  accentColor: colors.proteinColor,
+                ),
+                MacroPill(
+                  label: 'K ${totals.carbsGrams.round()}g',
+                  accentColor: colors.carbsColor,
+                ),
+                MacroPill(
+                  label: 'L ${totals.fatGrams.round()}g',
+                  accentColor: colors.fatColor,
+                ),
+              ],
             ),
           ],
         ),
@@ -523,11 +558,12 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
   }
 
   Widget _buildBottomSaveBar() {
+    final theme = Theme.of(context);
     final colors = context.calColors;
     final disabled = _items.isEmpty || _isSaving;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.94),
+        color: theme.scaffoldBackgroundColor,
         border: Border(top: BorderSide(color: colors.border)),
       ),
       child: SafeArea(
@@ -556,7 +592,91 @@ class _ReviewMealScreenState extends State<ReviewMealScreen> {
       ),
     );
   }
+}
 
+class _AiGradientBar extends StatefulWidget {
+  const _AiGradientBar({
+    required this.animate,
+    this.height = 4,
+  });
+
+  final bool animate;
+  final double height;
+
+  @override
+  State<_AiGradientBar> createState() => _AiGradientBarState();
+}
+
+class _AiGradientBarState extends State<_AiGradientBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(_AiGradientBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate != widget.animate) {
+      _syncAnimation();
+    }
+  }
+
+  void _syncAnimation() {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (widget.animate && !reduceMotion) {
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+    } else if (_controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.calColors;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final isAnimating =
+              widget.animate && !MediaQuery.disableAnimationsOf(context);
+          final shift = isAnimating ? (_controller.value * 2 - 1) * 0.45 : 0.0;
+          return Container(
+            height: widget.height,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment(-1.0 + shift, 0),
+                end: Alignment(1.0 + shift, 0),
+                colors: <Color>[colors.aiStart, colors.aiMid, colors.aiEnd],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _PhotoPreview extends StatelessWidget {
@@ -571,7 +691,7 @@ class _PhotoPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(24),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: Container(
@@ -610,8 +730,12 @@ class _EditableItemCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.calColors;
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: onEdit,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
@@ -621,25 +745,34 @@ class _EditableItemCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      item.name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${item.calories.round()} kkal',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: tabularFigures,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
-                      '${item.portionLabel} (${item.grams.round()} g) · ${item.calories.round()} kkal',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'P ${item.proteinGrams.round()}g · K ${item.carbsGrams.round()}g · L ${item.fatGrams.round()}g',
+                      '${item.portionLabel} (${item.grams.round()} g) · P ${item.proteinGrams.round()}g · K ${item.carbsGrams.round()}g · L ${item.fatGrams.round()}g',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.mutedText,
+                        fontFeatures: tabularFigures,
                       ),
                     ),
                   ],

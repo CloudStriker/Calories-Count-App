@@ -23,6 +23,40 @@ const List<String> _shortMonths = <String>[
   'Des',
 ];
 
+String shortWeekdayLabel(DateTime date) => _shortWeekdays[date.weekday - 1];
+
+String formatThousandsId(int value) {
+  final isNegative = value < 0;
+  final digits = value.abs().toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    final fromEnd = digits.length - i;
+    if (i > 0 && fromEnd % 3 == 0) {
+      buffer.write('.');
+    }
+    buffer.write(digits[i]);
+  }
+  return isNegative ? '-${buffer.toString()}' : buffer.toString();
+}
+
+List<DateTime> buildWeekWindow(DateTime selectedDate, {DateTime? now}) {
+  final today = startOfDay(now ?? DateTime.now());
+  final target = startOfDay(selectedDate);
+  final recentWindowStart = DateTime(today.year, today.month, today.day - 6);
+  final DateTime end;
+  if (!target.isBefore(recentWindowStart) && !target.isAfter(today)) {
+    end = today;
+  } else {
+    final candidateEnd = DateTime(target.year, target.month, target.day + 3);
+    end = candidateEnd.isAfter(today) ? today : candidateEnd;
+  }
+  final start = DateTime(end.year, end.month, end.day - 6);
+  return List<DateTime>.generate(
+    7,
+    (index) => DateTime(start.year, start.month, start.day + index),
+  );
+}
+
 DateTime startOfDay(DateTime date) => DateTime(date.year, date.month, date.day);
 
 bool isSameDay(DateTime a, DateTime b) =>
